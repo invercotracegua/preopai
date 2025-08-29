@@ -1,0 +1,18 @@
+[project]
+name = "PreopAI"
+
+[services.backend]
+root = "backend"
+start = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"
+env = ["DATABASE_URL","JWT_SECRET","ALLOWED_ORIGINS","TZ","ADMIN_TELEGRAM_ID","WOMPI_PUBLIC_KEY","WOMPI_PRIVATE_KEY","WOMPI_EVENTS_WEBHOOK","S3_ENDPOINT","S3_ACCESS_KEY","S3_SECRET_KEY","S3_BUCKET"]
+
+[services.web]
+root = "web"
+build = "npm ci && npm run build"
+start = "python -m http.server ${PORT} --directory dist"
+env = ["TZ"]
+
+[services.bot]
+root = "bot"
+start = "python bot.py"
+env = ["BOT_TOKEN","BOT_ADMIN_ID","BACKEND_BASE_URL","TZ"]
