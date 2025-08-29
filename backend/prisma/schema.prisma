@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+  vehicles  Vehicle[]
+  wallets   Wallet[]
+  priceConfigs PriceConfig[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(CONDUCTOR)
+  company   Company  @relation(fields: [companyId], references: [id])
+  companyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  ADMIN
+  JEFE_OPERATIVO
+  CONDUCTOR
+}
+
+model Vehicle {
+  id         String   @id @default(cuid())
+  plate      String   @unique
+  company    Company  @relation(fields: [companyId], references: [id])
+  companyId  String
+  reviews    Review[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Driver {
+  id         String   @id @default(cuid())
+  name       String
+  documentId String   @unique
+  company    Company  @relation(fields: [companyId], references: [id])
+  companyId  String
+  reviews    Review[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  company     Company  @relation(fields: [companyId], references: [id])
+  companyId   String
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+  vehicleId   String
+  driver      Driver   @relation(fields: [driverId], references: [id])
+  driverId    String
+  notes       String?
+  chargedAmount Int?   // COP
+  chargeStatus String? // DEBITED | SKIPPED | REFUNDED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  media       Media[]
+  aiReviews   AIReview[]
+}
+
+model Media {
+  id        String   @id @default(cuid())
+  review    Review   @relation(fields: [reviewId], references: [id])
+  reviewId  String
+  url       String
+  metaJson  Json?
+  createdAt DateTime @default(now())
+}
+
+model Wallet {
+  id         String   @id @default(cuid())
+  company    Company  @relation(fields: [companyId], references: [id])
+  companyId  String
+  balance    Int      @default(0) // COP
+  currency   String   @default("COP")
+  minThreshold Int    @default(10000)
+  autoRecarga Boolean @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  transactions Transaction[]
+}
+
+model Transaction {
+  id          String  @id @default(cuid())
+  wallet      Wallet  @relation(fields: [walletId], references: [id])
+  walletId    String
+  type        TxType
+  amount      Int
+  currency    String  @default("COP")
+  source      String  // WOMPI | REVIEW | REFUND
+  wompiId     String?
+  reviewId    String?
+  status      String  @default("APPROVED")
+  createdAt   DateTime @default(now())
+}
+
+enum TxType {
+  TOPUP
+  DEBIT
+  REFUND
+}
+
+model PriceConfig {
+  id         String   @id @default(cuid())
+  company    Company  @relation(fields: [companyId], references: [id])
+  companyId  String
+  forType    String   // GLOBAL | VEHICLE
+  vehicleId  String?
+  pricePerReview Int
+  minBalanceThreshold Int @default(10000)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model AIReview {
+  id        String   @id @default(cuid())
+  review    Review   @relation(fields: [reviewId], references: [id])
+  reviewId  String
+  imageId   String?
+  qualityScores Json?
+  ocrJson     Json?
+  defectScores Json?
+  decision    String? // ACCEPT | REJECT
+  trace       Json?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  diffJson  Json?
+  createdAt DateTime @default(now())
+}
